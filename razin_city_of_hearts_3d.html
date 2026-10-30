@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>RAZIN: CITY OF HEARTS — 3D Edition</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101827;color:#fff;font-family:system-ui,Arial}
+#game{position:fixed;inset:0}canvas{display:block}
+#top{position:fixed;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.panel{background:#0b1426d9;border:1px solid #ffffff2a;border-radius:13px;padding:10px 13px;box-shadow:0 8px 30px #0005;backdrop-filter:blur(8px)}
+#logo{font-weight:1000;color:#ffd166;letter-spacing:1px;font-size:13px}#objective{font-size:12px;margin-top:3px;max-width:270px;line-height:1.4}
+#stats{text-align:right;font-size:12px;line-height:1.7;white-space:nowrap}
+#minimap{position:fixed;right:14px;top:98px;width:130px;height:130px;border:2px solid #ffffff80;border-radius:12px;background:#0a1424d9}
+#toast{position:fixed;top:83px;left:50%;transform:translateX(-50%);background:#101a2deF;border:1px solid #ffffff40;padding:10px 15px;border-radius:24px;font-size:13px;display:none;text-align:center;max-width:90%;z-index:4}
+#overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:linear-gradient(#07101a99,#07101aeb);z-index:5}
+.card{width:min(490px,94vw);padding:27px;border-radius:22px;text-align:center;background:#111d31ed;border:1px solid #ffffff30;box-shadow:0 20px 80px #0009}
+h1{font-size:clamp(29px,7vw,48px);line-height:.98;color:#ffd166;margin:8px 0 12px}.muted{color:#c2ccdc;font-size:13px;line-height:1.65}
+.btn{border:0;border-radius:12px;padding:13px 22px;background:linear-gradient(135deg,#ffd166,#ff9861);font-weight:900;color:#24182a;font-size:15px;margin-top:13px}
+#touch{position:fixed;bottom:14px;left:12px;right:12px;display:none;justify-content:space-between;align-items:end;pointer-events:none}
+.pad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,44px);gap:5px;pointer-events:auto}
+.ctrl{background:#101b2cdd;color:#fff;border:1px solid #ffffff66;border-radius:11px;font-weight:800;touch-action:none}
+#actions{display:flex;gap:7px;pointer-events:auto}.act{width:57px;height:51px;font-size:10px}
+#help{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);font-size:11px;color:#ffffffb0;white-space:nowrap}
+@media(max-width:700px),(pointer:coarse){#touch{display:flex}#help{display:none}#minimap{width:105px;height:105px;top:106px}#objective{max-width:190px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="top">
+ <div class="panel"><div id="logo">🚘 RAZIN: CITY OF HEARTS</div><div id="objective">Mission: Start your adventure</div></div>
+ <div class="panel" id="stats">💵 $0 · 🌹 0/5<br>❤️ 100 · WANTED ☆☆☆☆☆</div>
+</div>
+<canvas id="minimap" width="130" height="130"></canvas><div id="toast"></div>
+<div id="help">WASD / arrows: move · E: enter/exit car · SPACE: action · SHIFT: sprint</div>
+<div id="touch">
+ <div class="pad"><i></i><button class="ctrl" data-k="arrowup">▲</button><i></i><button class="ctrl" data-k="arrowleft">◀</button><button class="ctrl" data-k="arrowdown">▼</button><button class="ctrl" data-k="arrowright">▶</button></div>
+ <div id="actions"><button class="ctrl act" id="enter">CAR</button><button class="ctrl act" id="attack">ACTION</button></div>
+</div>
+<div id="overlay"><div class="card">
+ <div style="font-size:43px">🌆 🚗 🌹</div><h1>RAZIN: CITY<br>OF HEARTS</h1>
+ <p class="muted"><b>THE 3D CITY EDITION</b><br>Explore a 3D city, take your car for a spin, collect roses, battle cheeky street thugs and escape the cops. Your final destination? A secret garden where Alia is waiting. ❤️</p>
+ <p class="muted"><b>Computer:</b> WASD / arrows, E to enter car, SPACE to use action, SHIFT to sprint.<br><b>Phone:</b> use the on-screen controls.</p>
+ <button class="btn" id="start">ENTER THE CITY</button>
+ <p class="muted" style="font-size:10px">Best played in landscape mode. Internet connection is needed to load the 3D engine.</p>
+ </div></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const root=document.querySelector('#game'),scene=new THREE.Scene();scene.background=new THREE.Color(0x8dc5d8);scene.fog=new THREE.Fog(0x8dc5d8,65,180);
+const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,500);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;root.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xd8efff,0x536344,2));
+const sun=new THREE.DirectionalLight(0xfff0d0,2.2);sun.position.set(-35,65,25);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
+const mat=(c,r=.8)=>new THREE.MeshStandardMaterial({color:c,roughness:r});
+const grass=mat(0x4e8652),road=mat(0x343b48),line=mat(0xf4d67d),sidewalk=mat(0xb8b8a4),white=mat(0xe8edf1),dark=mat(0x20283a);
+function box(x,y,z,sx,sy,sz,m){let o=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o}
+box(0,-.35,0,180,.6,140,grass);
+const roads=[{x:0,z:-36,w:180,d:12},{x:0,z:0,w:180,d:12},{x:0,z:36,w:180,d:12},{x:-55,z:0,w:10,d:140},{x:0,z:0,w:10,d:140},{x:55,z:0,w:10,d:140}];
+roads.forEach(r=>{box(r.x,-.02,r.z,r.w,.12,r.d,road);if(r.w>r.d){for(let x=-85;x<85;x+=9)box(x,.05,r.z,4,.025,.16,line)}else{for(let z=-65;z<65;z+=9)box(r.x,.05,z,.16,.025,4,line)}});
+for(let x=-84;x<=84;x+=14)for(let z=-62;z<=62;z+=19){if(roads.some(r=>Math.abs(x-r.x)<r.w/2+5&&Math.abs(z-r.z)<r.d/2+5))continue;let h=5+Math.random()*13,w=7+Math.random()*5,d=7+Math.random()*5;let colors=[0x77869a,0x927c78,0x6d8d83,0x8e87a5,0xb18d68];let b=box(x,h/2,z,w,h,d,mat(colors[Math.floor(Math.random()*colors.length)]));box(x,h+0.15,z,w*.72,.3,d*.72,mat(0x3d4c5d));for(let yy=2;yy<h-1;yy+=2.5){for(let xx=-w/2+1;xx<w/2-1;xx+=2.4){let win=box(x+xx,yy,z+d/2+.06,.8,.9,.08,mat(0xa9d9e6));win.castShadow=false}}}
+function tree(x,z){let trunk=box(x,1,z,.6,2,.6,mat(0x68452e));let crown=new THREE.Mesh(new THREE.IcosahedronGeometry(2.1,1),mat(0x27613e));crown.position.set(x,3,z);crown.castShadow=true;scene.add(crown)}
+for(let i=0;i<110;i++){let x=(Math.random()-.5)*170,z=(Math.random()-.5)*130;if(!roads.some(r=>Math.abs(x-r.x)<r.w/2+2&&Math.abs(z-r.z)<r.d/2+2))tree(x,z)}
+// Garden destination
+box(67,-.02,49,34,.12,26,mat(0x326e49));box(67,.05,49,22,.15,2,mat(0xd6c49a));box(67,.05,49,2,.15,19,mat(0xd6c49a));
+for(let i=0;i<35;i++){let x=52+Math.random()*30,z=39+Math.random()*20;let f=new THREE.Mesh(new THREE.SphereGeometry(.25,8,8),mat([0xff6b9a,0xffd166,0xf4f1ff][i%3]));f.position.set(x,.6,z);scene.add(f)}
+function person(color=0x2e9bd2){let g=new THREE.Group();let body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.85,4,8),mat(color));body.position.y=1.05;body.castShadow=true;g.add(body);let head=new THREE.Mesh(new THREE.SphereGeometry(.37,12,10),mat(0xe9bd9e));head.position.y=1.95;g.add(head);let hair=new THREE.Mesh(new THREE.SphereGeometry(.39,12,8),mat(0x30251f));hair.position.set(0,2.17,0);g.add(hair);let legs=new THREE.Mesh(new THREE.BoxGeometry(.7,.5,.5),mat(0x202b46));legs.position.y=.3;g.add(legs);scene.add(g);return g}
+const player=person(),alia=person(0xff72a1);alia.position.set(67,0,49);alia.scale.set(1.05,1.05,1.05);
+const cars=[];function makeCar(x,z,color,police=false){let g=new THREE.Group();let base=new THREE.Mesh(new THREE.BoxGeometry(4.2,1.05,2.1),mat(color));base.position.y=.8;base.castShadow=true;g.add(base);let cabin=new THREE.Mesh(new THREE.BoxGeometry(2.25,.85,1.8),mat(0x9bc6d5,.3));cabin.position.set(-.25,1.65,0);g.add(cabin);for(let xx of [-1.35,1.35])for(let zz of [-1.12,1.12]){let w=new THREE.Mesh(new THREE.CylinderGeometry(.43,.43,.25,12),mat(0x17191d));w.rotation.x=Math.PI/2;w.position.set(xx,.48,zz);g.add(w)}if(police){let l=boxIn(g,0,2.15,0,.6,.2,1.2,mat(0x418fff));}g.position.set(x,0,z);scene.add(g);cars.push(g);return g}
+function boxIn(g,x,y,z,sx,sy,sz,m){let o=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);o.position.set(x,y,z);g.add(o);return o}
+const car=makeCar(-46,4,0xf4bf45),police=[makeCar(45,26,0xe8edf3,true),makeCar(-70,-20,0xe8edf3,true)];
+// rose pickups
+const roseSpots=[[-29,-31],[15,-28],[72,-18],[30,26],[-38,53]],roses=[];
+roseSpots.forEach(([x,z])=>{let g=new THREE.Group();let stem=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.7,6),mat(0x32864d));stem.position.y=.35;g.add(stem);let bloom=new THREE.Mesh(new THREE.SphereGeometry(.34,10,8),mat(0xff427c));bloom.position.y=.85;g.add(bloom);g.position.set(x,0,z);scene.add(g);roses.push({g,x,z,got:false})});
+const enemies=[];for(let i=0;i<4;i++){let e=person(0x5b303b);e.position.set(-20+i*18,0,20+(i%2)*8);enemies.push({g:e,hp:2,alive:true,shot:0})}
+const keys={};let active=false,inCar=false,health=100,money=0,roseCount=0,wanted=0,stage=0,toastT=0,finished=false,carSpeed=0;
+const hud=()=>{document.querySelector('#stats').innerHTML=`💵 $${money} · 🌹 ${roseCount}/5<br>❤️ ${health} · WANTED ${'★'.repeat(wanted)}${'☆'.repeat(5-wanted)}`;document.querySelector('#objective').textContent=finished?'MISSION COMPLETE: Together at last ❤️':['Mission 1: Find your yellow car. Press E nearby.','Mission 2: Collect all 5 roses around the city.','Mission 3: Reach the garden and find Alia.'][stage]};
+function toast(t){let el=document.querySelector('#toast');el.textContent=t;el.style.display='block';toastT=170}
+function dist(a,b){return Math.hypot(a.x-b.x,a.z-b.z)}
+function pos(){return inCar?car.position:player.position}
+function toggleCar(){if(!active)return;if(!inCar&&dist(player.position,car.position)<7){inCar=true;player.visible=false;stage=Math.max(stage,1);toast('Nice ride, Razin! Collect those roses.')}else if(inCar){inCar=false;player.visible=true;player.position.copy(car.position);player.position.x+=3;carSpeed=0;toast('Back on foot.');}hud()}
+function action(){if(!active)return;if(inCar){toast('Use the car to cruise around!');return}let target=null;for(let e of enemies)if(e.alive&&dist(player.position,e.g.position)<12){target=e;break}if(target){target.hp--;wanted=Math.min(5,wanted+1);if(target.hp<=0){target.alive=false;target.g.visible=false;money+=150;toast('Enemy defeated! +$150')}else toast('Hit! One more action to take them down.');hud();return}if(stage===2&&dist(player.position,alia.position)<8){finished=true;toast('Razin found Alia. The city is yours, together. ❤️');hud();return}toast('No target nearby. Keep exploring!')}
+window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(e.key.toLowerCase()))e.preventDefault();if(e.key.toLowerCase()==='e')toggleCar();if(e.code==='Space')action()});
+window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+document.querySelectorAll('[data-k]').forEach(b=>{let k=b.dataset.k;b.addEventListener('pointerdown',e=>{e.preventDefault();keys[k]=true});['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false))});
+document.querySelector('#enter').onclick=toggleCar;document.querySelector('#attack').onclick=action;
+document.querySelector('#start').onclick=()=>{active=true;document.querySelector('#overlay').style.display='none';toast('Welcome to the city, Razin. Find your yellow car!');hud()};
+function update(dt){if(!active||finished)return;let p=pos(),up=keys.w||keys.arrowup,down=keys.s||keys.arrowdown,left=keys.a||keys.arrowleft,right=keys.d||keys.arrowright;
+if(inCar){if(left)car.rotation.y+=2.1*dt;if(right)car.rotation.y-=2.1*dt;if(up)carSpeed=Math.min(19,carSpeed+18*dt);else if(down)carSpeed=Math.max(-8,carSpeed-18*dt);else carSpeed*=.96;car.position.x+=Math.sin(car.rotation.y)*carSpeed*dt;car.position.z+=Math.cos(car.rotation.y)*carSpeed*dt;car.position.x=THREE.MathUtils.clamp(car.position.x,-85,85);car.position.z=THREE.MathUtils.clamp(car.position.z,-65,65)}else{let dx=(right?1:0)-(left?1:0),dz=(down?1:0)-(up?1:0);let len=Math.hypot(dx,dz);if(len){dx/=len;dz/=len;let sp=keys.shift?12:7;player.position.x+=dx*sp*dt;player.position.z+=dz*sp*dt;player.rotation.y=Math.atan2(dx,dz)}}
+p=pos();roses.forEach(r=>{if(!r.got&&dist(p,r)<3.5){r.got=true;r.g.visible=false;roseCount++;money+=100;toast('Rose collected! +$100 🌹');if(roseCount===5){stage=2;toast('All 5 roses! Find the garden and Alia.')}hud()}});
+police.forEach((c,i)=>{if(wanted>0){let dx=p.x-c.position.x,dz=p.z-c.position.z,d=Math.hypot(dx,dz);if(d<45){c.position.x+=dx/d*5*dt;c.position.z+=dz/d*5*dt;if(d<3){health=Math.max(0,health-10);wanted=Math.max(0,wanted-1);toast('Police caught you! Health -10');if(health===0){health=100;money=Math.max(0,money-200);p.x=-46;p.z=4;toast('Busted! -$200. Back to the streets.')}hud()}}}});
+enemies.forEach(e=>{if(e.alive&&dist(p,e.g.position)<20)e.g.lookAt(p.x,0,p.z)});
+if(stage===2&&!inCar&&dist(player.position,alia.position)<6){finished=true;hud();toast('A beautiful ending. ❤️')}
+const desired=new THREE.Vector3(p.x+Math.sin(inCar?car.rotation.y:player.rotation.y)*-13,10+(inCar?2:0),p.z+Math.cos(inCar?car.rotation.y:player.rotation.y)*-13);camera.position.lerp(desired,1-Math.pow(.001,dt));camera.lookAt(p.x,1.2,p.z);
+}
+function drawMap(){let c=document.querySelector('#minimap'),g=c.getContext('2d'),s=130;g.clearRect(0,0,s,s);g.fillStyle='#274331';g.fillRect(0,0,s,s);g.fillStyle='#4c5360';roads.forEach(r=>g.fillRect((r.x+90)/180*s-r.w/180*s/2,(r.z+70)/140*s-r.d/140*s/2,r.w/180*s,r.d/140*s));g.fillStyle='#ff5b91';g.fillRect((67+90)/180*s-3,(49+70)/140*s-3,6,6);roses.forEach(r=>{if(!r.got){g.fillStyle='#ffcf65';g.beginPath();g.arc((r.x+90)/180*s,(r.z+70)/140*s,2.5,0,7);g.fill()}});let p=pos();g.fillStyle='#fff';g.beginPath();g.arc((p.x+90)/180*s,(p.z+70)/140*s,4,0,7);g.fill()}
+let last=performance.now();function loop(now){let dt=Math.min((now-last)/1000,.04);last=now;update(dt);drawMap();renderer.render(scene,camera);if(toastT>0&&--toastT===0)document.querySelector('#toast').style.display='none';requestAnimationFrame(loop)}requestAnimationFrame(loop);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+hud();
+</script>
+</body></html>
